@@ -1,0 +1,63 @@
+{
+  "name": "enshrouded-save-editor",
+  "version": "1.0.2",
+  "description": "Editor de save do Enshrouded, com suporte às cópias do Enshrouded Server Guardian.",
+  "main": "electron/main.cjs",
+  "private": true,
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "vite build",
+    "test": "node tests/dados-completos.mjs && node tests/soquete.mjs && node tests/itens-novos.mjs && node tests/nomes-por-idioma.mjs && node tests/estatisticas.mjs && node tests/todas-as-armas.mjs && node tests/ida-e-volta.mjs",
+    "dist": "tauri build --no-bundle"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.12.1",
+    "@tauri-apps/plugin-dialog": "^2.8.0",
+    "buffer": "^6.0.3",
+    "hash-wasm": "4.12.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.1",
+    "@vitejs/plugin-react": "4.3.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "vite": "5.4.10"
+  },
+  "build": {
+    "appId": "local.nicolas.enshrouded-save-editor",
+    "productName": "Enshrouded Save Editor",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**",
+      "dist/**",
+      "data/*.json",
+      "package.json",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "build-assets/game",
+        "to": "game"
+      }
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "artifactName": "EnshroudedSaveEditor-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "EnshroudedSaveEditor-${version}-portable.exe"
+    },
+    "electronLanguages": [
+      "pt-BR",
+      "en-US"
+    ],
+    "compression": "maximum"
+  },
+  "build_note": "O campo \"build\" abaixo é só do Electron (legado); a versão principal é a Tauri em src-tauri/.",
+  "license": "MIT"
+}

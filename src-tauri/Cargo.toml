@@ -1,0 +1,26 @@
+[package]
+name = "enshrouded-save-editor"
+version = "1.0.2"
+edition = "2021"
+description = "Editor de saves de personagem do Enshrouded 1.0 (versão Tauri)"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.1", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.1", features = [] }
+tauri-plugin-dialog = "=2.8.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+zstd = "=0.14.0"
+include_dir = "=0.7.4"
+russh = { version = "0.64", default-features = false, features = ["ring", "rsa", "flate2"] }
+russh-sftp = "3.0.1"
+tokio = { version = "1.54.1", features = ["io-util", "sync", "net", "macros", "rt", "rt-multi-thread"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
