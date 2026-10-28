@@ -1,6 +1,6 @@
 // Acesso aos recursos extraídos do jogo (servidos pelo protocolo game://) e à configuração
 // visual do FbUiBundle (data/ui.json).
-import ui from '../data/ui.json';
+import ui from './data/ui.json' with { type: 'json' };
 import { items } from './gamedata.js';
 import { ASSET_BASE } from './platform.js';
 

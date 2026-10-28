@@ -1,60 +1,22 @@
-// Implementação de window.api para a versão Tauri: a lógica do save roda aqui (JS no WebView)
-// e o Rust cuida de arquivos, zstd, backups e da detecção do jogo.
-import { Buffer } from 'buffer';
-import { invoke as invokeTauri } from '@tauri-apps/api/core';
-import { open as openDialog } from '@tauri-apps/plugin-dialog';
-import * as sv2c from '../shared/sv2c-web.mjs';
-import { parseCharacter, buildCharacter } from '../shared/character.mjs';
-import * as know from '../shared/knowledge.mjs';
-import { compararSaves, motivoEmTexto } from '../shared/recusa.mjs';
-import items from '../data/items.json';
+// Implementação de window.api para a versão Tauri. O formato do save e os saves abertos ficam no
+// Rust (src-tauri/src/formato, sessao.rs): daqui vai e volta só o modelo (nível, habilidades,
+// itens, conhecimento), nunca os bytes do save.
+import { compararSaves, motivoEmTexto } from './shared/recusa.js';
+import items from './data/items.json' with { type: 'json' };
 import { itemName, nomeConhecimento } from './gamedata.js';
-import skills from '../data/skills.json';
-import mapaConhecimento from '../data/conhecimento.json';
+import skills from './data/skills.json' with { type: 'json' };
+import mapaConhecimento from './data/conhecimento.json' with { type: 'json' };
 import { t, dataHora } from './i18n.js';
 
 // O invoke do Tauri rejeita com a string do Err do Rust, que não tem .message: quem fazia
 // `catch (e) => e.message` mostrava "undefined" e perdia o motivo do erro. Embrulhamos aqui, numa
-// vez só, para todas as chamadas.
-const invoke = (cmd, args) => invokeTauri(cmd, args).catch((e) => {
-  throw e instanceof Error ? e : new Error(typeof e === 'string' ? e : JSON.stringify(e));
+// vez só, para todas as chamadas. As mensagens do Rust estão em português, que é a chave do t().
+const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args).catch((e) => {
+  throw e instanceof Error ? e : new Error(typeof e === 'string' ? t(e) : JSON.stringify(e));
 });
 
 const isItem = (id) => Object.prototype.hasOwnProperty.call(items, id);
 const isSkill = (id) => Object.prototype.hasOwnProperty.call(skills.nodes, id);
-// O que pode estar vestido, pelo campo slot do item: separa a lista de equipamento da mochila,
-// que também é densa e começa no índice 0. As armas ficam fora desta lista.
-const ESPACOS = new Set(['Armour_Head', 'Armour_UpperBody', 'Armour_Arms', 'Armour_LowerBody', 'Armour_Feet',
-  'Armour_Ring', 'Shield', 'HookShot', 'Glider', 'Backpack']);
-const ehEquipavel = (id) => ESPACOS.has(items[id]?.slot);
-const sessions = new Map();
-
-const readFile = async (path) => new Uint8Array(await invoke('read_file', { path }));
-const decompress = async (bytes) => new Uint8Array(await invoke('zstd_decompress', { data: Array.from(bytes) }));
-const compress = async (bytes) => new Uint8Array(await invoke('zstd_compress', { data: Array.from(bytes) }));
-
-async function load(path) {
-  await sv2c.init();
-  const save = await sv2c.parse(await readFile(path), decompress, ['character_data', 'player_character', 'player_knowledge']);
-  const pc = save.blocks.find((b) => b.name === 'player_character');
-  let character = null, error = null;
-  try { character = parseCharacter(pc.payload, isItem, isSkill, ehEquipavel); } catch (e) { error = e.message; }
-  let knowledge = null;
-  const pk = save.blocks.find((b) => b.name === 'player_knowledge');
-  try { if (pk?.payload) knowledge = know.parseBlock(pk.payload); } catch (e) { knowledge = null; }
-  return { save, character, knowledge, error };
-}
-
-function publicModel(path, modified, s) {
-  const c = s.character;
-  return {
-    path, name: sv2c.characterName(s.save), modified, error: s.error, readOnly: !c,
-    level: c?.level, xp: c?.xp, skills: c?.skills ?? [], equipment: c?.equipment ?? [], main: c?.main ?? [], extra: c?.extra ?? [],
-    knowledge: s.knowledge?.entries ?? null,
-    equipMask: c?._equipMask ?? 0, // posiciona cada peça no espaço certo do boneco
-    blocks: s.save.blocks.map((b) => ({ name: b.name, size: b.payload ? b.payload.length : b.size })),
-  };
-}
 
 function checkModel(m) {
   const ints = (v, max) => Number.isInteger(v) && v >= 0 && v <= max;
@@ -77,36 +39,23 @@ function checkModel(m) {
   }
 }
 
-// o conhecimento só é regravado se mudou: assim um save aberto e salvo sem mexer nele fica igual
-function mudouConhecimento(s, model) {
-  if (!s.knowledge || !model.knowledge) return false;
-  return JSON.stringify(s.knowledge.entries) !== JSON.stringify(model.knowledge);
-}
+
+// só o que a interface pode editar; o resto do modelo (nome, caminho, blocos) não volta ao Rust
+const edicao = (m) => ({
+  level: m.level, xp: m.xp, skills: m.skills, equipment: m.equipment, main: m.main, extra: m.extra,
+  knowledge: m.knowledge ?? null,
+});
 
 // ---------------------------------------------------------------- cópias do servidor (guardião)
 // O guardião guarda, por jogador, o bloco player_character (A.bin) e o player_knowledge (K.bin).
 // Elas entram na mesma lista dos saves locais, com o caminho "servidor:<steamid>". Editar a cópia
 // e expulsar o jogador faz o guardião trocar o save dele pela versão editada na próxima entrada.
 const PREFIXO = 'servidor:';
-const CAB = 14; // cabeçalho S2BH de um bloco
 const ehServidor = (p) => typeof p === 'string' && p.startsWith(PREFIXO);
 const steamidDe = (p) => p.slice(PREFIXO.length);
 const lerDoServidor = async (steamid, arquivo) => new Uint8Array(await invoke('servidor_ler', { steamid, arquivo }));
-
-async function loadServidor(steamid) {
-  // Buffer, e não Uint8Array: parseCharacter usa os métodos de leitura do Buffer
-  const A = Buffer.from(await lerDoServidor(steamid, 'A.bin'));
-  if (A.length < CAB || A.toString('latin1', 0, 4) !== 'S2BH') {
-    throw new Error(t('a cópia do servidor não é um bloco de personagem'));
-  }
-  let character = null, error = null;
-  try { character = parseCharacter(A.subarray(CAB), isItem, isSkill, ehEquipavel); } catch (e) { error = e.message; }
-  let knowledge = null;
-  try { knowledge = know.parseRaw(await lerDoServidor(steamid, 'K.bin')); } catch { knowledge = null; }
-  let meta = {};
-  try { meta = JSON.parse(new TextDecoder().decode(await lerDoServidor(steamid, 'meta.json'))); } catch { /* sem meta */ }
-  return { servidor: true, steamid, cabecalho: A.slice(0, CAB), character, knowledge, error, meta };
-}
+// `abrir` guarda a cópia no Rust para gravar depois; sem ele é só leitura
+const loadServidor = (steamid, abrir = false) => invoke('servidor_abrir', { steamid, abrir });
 
 // por que a lista do servidor veio vazia (mostrado na aba Servidor)
 let estadoServidor = { configurado: false, erro: null };
@@ -132,31 +81,21 @@ async function nomes(forcar = false) {
 }
 
 function modeloServidor(s, nome) {
-  const c = s.character;
+  const { meta, ...m } = s;
   return {
+    ...m,
     path: PREFIXO + s.steamid, name: nome ? t('{nome} (servidor)', { nome }) : t('Servidor · {steamid}', { steamid: s.steamid }),
-    jogador: nome ?? null, modified: s.meta?.quando ? Date.parse(s.meta.quando) : 0,
-    error: s.error, readOnly: !c, servidor: true, steamid: s.steamid,
-    online: s.meta?.final === 0, // último save periódico: o jogador provavelmente ainda está na sessão
-    level: c?.level, xp: c?.xp, skills: c?.skills ?? [], equipment: c?.equipment ?? [], main: c?.main ?? [], extra: c?.extra ?? [],
-    knowledge: s.knowledge?.entries ?? null,
-    equipMask: c?._equipMask ?? 0,
-    blocks: [{ name: 'player_character', size: (s.meta?.tamA ?? 0) }, { name: 'player_knowledge', size: (s.meta?.nK ?? 0) * 8 }],
+    jogador: nome ?? null, modified: meta?.quando ? Date.parse(meta.quando) : 0,
+    servidor: true,
+    online: meta?.final === 0, // último save periódico: o jogador provavelmente ainda está na sessão
+    blocks: [{ name: 'player_character', size: (meta?.tamA ?? 0) }, { name: 'player_knowledge', size: (meta?.nK ?? 0) * 8 }],
   };
 }
 
 export default {
   async listSaves() {
-    const files = await invoke('list_saves');
-    const out = [];
-    for (const f of files) {
-      try {
-        const s = await load(f.path);
-        out.push({ ...f, name: sv2c.characterName(s.save), level: s.character?.level, error: s.error });
-      } catch (e) {
-        out.push({ ...f, name: '?', error: e.message });
-      }
-    }
+    // cada save local já vem lido pelo Rust, com nome, nível e o erro de leitura, se houver
+    const out = (await invoke('listar_saves')).map((f) => (f.error ? { ...f, error: t(f.error) } : f));
     try {
       const cfg = await invoke('servidor_config');
       estadoServidor = { configurado: cfg.configurado, erro: null };
@@ -270,7 +209,7 @@ export default {
     escolhidos = escolhidos.slice(-limite).reverse();
     if (!escolhidos.length) return [];
     const atual = await loadServidor(steamid);
-    const servidor = { ...atual.character, knowledge: atual.knowledge?.entries ?? [] };
+    const servidor = { ...atual, knowledge: atual.knowledge ?? [] };
     const nomeItem = (id) => (items[id] ? itemName(id) : t('id {id}', { id }));
     const nomeDeConhecimento = (id) => (mapaConhecimento[id]
       ? nomeConhecimento(mapaConhecimento[id], id)
@@ -286,10 +225,7 @@ export default {
         continue;
       }
       try {
-        const blob = Buffer.from(new Uint8Array(await invoke('servidor_recusado_ler', { steamid, nome: arquivo })));
-        if (reg.tamA + reg.nK * 8 !== blob.length) throw new Error(t('os tamanhos do registro não fecham com o arquivo'));
-        const c = parseCharacter(blob.subarray(CAB, reg.tamA), isItem, isSkill, ehEquipavel);
-        const cliente = { ...c, knowledge: know.parseRaw(blob.subarray(reg.tamA)).entries };
+        const cliente = await invoke('servidor_recusado_abrir', { steamid, nome: arquivo, tamA: reg.tamA, nK: reg.nK });
         // A referência certa é a cópia do instante da recusa, que o guardião grava ao lado. Sem
         // ela (recusas anteriores a essa versão do guardião) sobra a cópia de agora, que já mudou:
         // aí a diferença inclui o que o jogador fez depois, e o motivo avisa isso.
@@ -297,11 +233,9 @@ export default {
         let referenciaAntiga = reg.guardadoTamA !== atual.meta?.tamA || reg.guardadoNK !== atual.meta?.nK;
         if (temReferencia.has(carimbo.slice(0, 8) + '_' + carimbo.slice(8))) {
           try {
-            const bref = Buffer.from(new Uint8Array(await invoke('servidor_recusado_ler', {
-              steamid, nome: `${carimbo.slice(0, 8)}_${carimbo.slice(8)}_referencia.bin`,
-            })));
-            const cr = parseCharacter(bref.subarray(CAB, reg.guardadoTamA), isItem, isSkill, ehEquipavel);
-            referencia = { ...cr, knowledge: know.parseRaw(bref.subarray(reg.guardadoTamA)).entries };
+            referencia = await invoke('servidor_recusado_abrir', {
+              steamid, nome: `${carimbo.slice(0, 8)}_${carimbo.slice(8)}_referencia.bin`, tamA: reg.guardadoTamA, nK: null,
+            });
             referenciaAntiga = false;
           } catch { /* sem a referência, fica a cópia atual e o aviso */ }
         }
@@ -324,68 +258,35 @@ export default {
   },
   async openSave(path) {
     if (ehServidor(path)) {
-      const s = await loadServidor(steamidDe(path));
-      sessions.set(path, s);
+      const s = await loadServidor(steamidDe(path), true);
       return modeloServidor(s, (await nomes())[s.steamid]);
     }
-    const s = await load(path);
-    sessions.set(path, s);
-    const { modified } = await invoke('file_info', { path });
-    return publicModel(path, modified, s);
+    return invoke('abrir_save', { path });
   },
   async browseSave() {
-    const r = await openDialog({ filters: [{ name: t('Save do Enshrouded'), extensions: ['ksd'] }], multiple: false });
+    const r = await invoke('plugin:dialog|open', {
+      options: { filters: [{ name: t('Save do Enshrouded'), extensions: ['ksd'] }], multiple: false },
+    });
     return r || null;
   },
   async writeSave(path, model) {
     if (ehServidor(path)) return this.writeServidor(path, model);
     if (await invoke('game_running')) throw new Error(t('Feche o Enshrouded antes de salvar: o jogo sobrescreveria a edição.'));
-    const s = sessions.get(path);
-    if (!s?.character) throw new Error(t('Save não aberto para edição'));
     checkModel(model);
-    const c = { ...s.character, level: model.level, xp: model.xp, skills: model.skills, equipment: model.equipment, main: model.main, extra: model.extra };
-    const payload = buildCharacter(c);
-    parseCharacter(payload, isItem, isSkill, ehEquipavel); // confere que o bloco novo é lido de volta
-    const pk = mudouConhecimento(s, model) ? know.buildBlock({ ...s.knowledge, entries: model.knowledge }) : null;
-    const blocks = s.save.blocks.map((b) => {
-      if (b.name === 'player_character') return { ...b, payload, changed: true };
-      if (b.name === 'player_knowledge' && pk) return { ...b, payload: pk, changed: true };
-      return b;
-    });
-    const data = await sv2c.build({ header: s.save.header, blocks }, compress);
-    await sv2c.parse(data, decompress, []); // valida hashes e estrutura
-    const backupDir = await invoke('backup_file', { path });
-    await invoke('write_save', { path, data: Array.from(data) });
-    const fresh = await load(path);
-    sessions.set(path, fresh);
-    const { modified } = await invoke('file_info', { path });
-    return { backupDir, model: publicModel(path, modified, fresh) };
+    // o Rust remonta o bloco, confere que ele é lido de volta, valida o .ksd inteiro e faz o backup
+    return invoke('gravar_save', { path, model: edicao(model) });
   },
   // grava a cópia do servidor: vale na próxima entrada do jogador (expulse-o para aplicar agora)
   async writeServidor(path, model) {
-    const s = sessions.get(path);
-    if (!s?.character) throw new Error(t('Cópia do servidor não aberta para edição'));
     checkModel(model);
-    const c = { ...s.character, level: model.level, xp: model.xp, skills: model.skills, equipment: model.equipment, main: model.main, extra: model.extra };
-    const payload = buildCharacter(c);
-    parseCharacter(payload, isItem, isSkill, ehEquipavel); // confere que o bloco novo é lido de volta
-    const A = new Uint8Array(s.cabecalho.length + payload.length);
-    A.set(s.cabecalho, 0);
-    A.set(payload, s.cabecalho.length);
-    const backupDir = await invoke('servidor_gravar', { steamid: s.steamid, arquivo: 'A.bin', data: Array.from(A) });
-    if (mudouConhecimento(s, model)) {
-      const K = know.buildRaw({ entries: model.knowledge });
-      await invoke('servidor_gravar', { steamid: s.steamid, arquivo: 'K.bin', data: Array.from(K) });
-    }
-    const fresh = await loadServidor(s.steamid);
-    sessions.set(path, fresh);
-    return { backupDir, model: modeloServidor(fresh, (await nomes())[fresh.steamid]) };
+    const r = await invoke('servidor_gravar_personagem', { steamid: steamidDe(path), model: edicao(model) });
+    return { backupDir: r.backupDir, model: modeloServidor(r.model, (await nomes())[r.model.steamid]) };
   },
   gameRunning: () => invoke('game_running'),
   // cópias do servidor não têm backup automático do jogo; o editor guarda o anterior ao gravar
   listBackups: (target) => (ehServidor(target) ? Promise.resolve([]) : invoke('list_backups', { target })),
   restoreBackup: (src, target) => (ehServidor(target)
     ? Promise.reject(new Error(t('Para desfazer no servidor, grave de novo a cópia guardada em Documentos\\Enshrouded-Backups\\servidor')))
-    : invoke('restore_backup', { src, target }).then(() => { sessions.delete(target); return true; })),
+    : invoke('restore_backup', { src, target }).then(() => true)),
   openBackups: () => invoke('open_backups'),
 };

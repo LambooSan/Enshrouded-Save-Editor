@@ -1,8 +1,11 @@
-// Versão Tauri do editor: a lógica do save roda no WebView (src/tauri-api.js); aqui ficam
-// arquivos, zstd, backups, detecção do jogo e o protocolo game:// com os recursos embutidos no exe.
+// Versão Tauri do editor: o formato do save (formato/) e os saves abertos (sessao.rs) ficam aqui,
+// junto com arquivos, backups, detecção do jogo e o protocolo game:// com os recursos embutidos no
+// exe. O WebView (src/) só desenha e edita o modelo.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod formato;
 mod servidor;
+mod sessao;
 mod sftp;
 #[cfg(test)]
 mod testes_e2e;
@@ -14,7 +17,6 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::UNIX_EPOCH;
 use tauri::http::Response as HttpResponse;
-use tauri::ipc::Response;
 
 // texturas, ícones e fontes extraídos do jogo (tools/pack_assets.py)
 static GAME: Dir = include_dir!("$CARGO_MANIFEST_DIR/../build-assets/game");
@@ -24,13 +26,13 @@ use std::os::windows::process::CommandExt;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
-fn modified_ms(p: &Path) -> f64 {
+pub(crate) fn modified_ms(p: &Path) -> f64 {
     fs::metadata(p).and_then(|m| m.modified()).ok()
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
         .map(|d| d.as_millis() as f64).unwrap_or(0.0)
 }
 
-fn is_save(path: &str) -> Result<PathBuf, String> {
+pub(crate) fn is_save(path: &str) -> Result<PathBuf, String> {
     let p = PathBuf::from(path);
     match p.extension().and_then(|e| e.to_str()) {
         Some(e) if e.eq_ignore_ascii_case("ksd") => Ok(p),
@@ -44,7 +46,7 @@ fn backup_root() -> PathBuf {
 }
 
 #[derive(Serialize)]
-struct SaveFile { path: String, file: String, modified: f64 }
+pub(crate) struct SaveFile { pub path: String, file: String, modified: f64 }
 
 /// `character0.ksd`, `character12.ksd`. Cópias do jogo são `character0.ksd.backup-N` e não entram.
 fn is_character_ksd(name: &str) -> bool {
@@ -127,8 +129,7 @@ fn collect_local_characters(dir: &Path, depth: u32, out: &mut Vec<SaveFile>, see
     }
 }
 
-#[tauri::command]
-fn list_saves() -> Vec<SaveFile> {
+pub(crate) fn list_saves() -> Vec<SaveFile> {
     let mut out = vec![];
     let mut seen = vec![];
     for root in steam_userdata_dirs() {
@@ -142,28 +143,6 @@ fn list_saves() -> Vec<SaveFile> {
         collect_local_characters(&local, 0, &mut out, &mut seen);
     }
     out
-}
-
-#[derive(Serialize)]
-struct FileInfo { modified: f64 }
-
-#[tauri::command]
-fn file_info(path: String) -> FileInfo { FileInfo { modified: modified_ms(Path::new(&path)) } }
-
-#[tauri::command]
-fn read_file(path: String) -> Result<Response, String> {
-    let p = is_save(&path)?;
-    fs::read(p).map(Response::new).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn zstd_decompress(data: Vec<u8>) -> Result<Response, String> {
-    zstd::stream::decode_all(&data[..]).map(Response::new).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn zstd_compress(data: Vec<u8>) -> Result<Response, String> {
-    zstd::bulk::compress(&data, 19).map(Response::new).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -196,13 +175,11 @@ fn make_backup(file: &Path) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
-#[tauri::command]
-fn backup_file(path: String) -> Result<String, String> {
+pub(crate) fn backup_file(path: String) -> Result<String, String> {
     make_backup(&is_save(&path)?).map(|d| d.to_string_lossy().to_string())
 }
 
-#[tauri::command]
-fn write_save(path: String, data: Vec<u8>) -> Result<(), String> {
+pub(crate) fn write_save(path: String, data: Vec<u8>) -> Result<(), String> {
     if game_running() { return Err("Feche o Enshrouded antes de salvar.".into()); }
     let p = is_save(&path)?;
     if data.len() < 0x30 || &data[..4] != b"SV2C" { return Err("Dados inválidos".into()); }
@@ -259,7 +236,9 @@ fn restore_backup(src: String, target: String) -> Result<(), String> {
     let data = fs::read(&s).map_err(|e| e.to_string())?;
     if data.len() < 4 || &data[..4] != b"SV2C" { return Err("O arquivo de backup não é um save válido".into()); }
     make_backup(&t)?;
-    fs::write(t, data).map_err(|e| e.to_string())
+    fs::write(t, data).map_err(|e| e.to_string())?;
+    sessao::esquecer(&target);
+    Ok(())
 }
 
 #[tauri::command]
@@ -288,12 +267,13 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            list_saves, file_info, read_file, zstd_decompress, zstd_compress, game_running,
-            backup_file, write_save, list_backups, restore_backup, open_backups,
+            game_running, list_backups, restore_backup, open_backups,
+            sessao::listar_saves, sessao::abrir_save, sessao::gravar_save,
+            sessao::servidor_abrir, sessao::servidor_gravar_personagem, sessao::servidor_recusado_abrir,
             servidor::servidor_config, servidor::servidor_config_set, servidor::servidor_jogadores,
-            servidor::servidor_ler, servidor::servidor_gravar, servidor::servidor_modo,
+            servidor::servidor_ler, servidor::servidor_modo,
             servidor::servidor_registro, servidor::servidor_nomes,
-            servidor::servidor_recusados, servidor::servidor_recusado_ler, servidor::servidor_hostkey
+            servidor::servidor_recusados, servidor::servidor_hostkey
         ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar o editor");

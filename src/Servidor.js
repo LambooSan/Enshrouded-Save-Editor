@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { html, useEffect, useState } from './react.js';
 import { api } from './platform.js';
-import { GameButton } from './components.jsx';
+import { GameButton } from './components.js';
 import { t } from './i18n.js';
 
 // Configuração do acesso ao servidor dedicado e situação do guardião.
@@ -17,13 +17,13 @@ export default function Servidor({ onClose, onChanged }) {
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
   }, [onClose]);
 
-  const campo = (rotulo, chave, dica, tipo = 'text') => (
+  const campo = (rotulo, chave, dica, tipo = 'text') => html`
     <label className="srv-campo">
-      <span className="caps small">{t(rotulo)}</span>
-      <input type={tipo} value={cfg[chave] ?? ''} placeholder={t(dica)}
-        onChange={(e) => setCfg({ ...cfg, [chave]: tipo === 'number' ? Number(e.target.value) : e.target.value })} />
+      <span className="caps small">${t(rotulo)}</span>
+      <input type=${tipo} value=${cfg[chave] ?? ''} placeholder=${t(dica)}
+        onChange=${(e) => setCfg({ ...cfg, [chave]: tipo === 'number' ? Number(e.target.value) : e.target.value })} />
     </label>
-  );
+  `;
 
   const salvar = async () => {
     try {
@@ -61,37 +61,37 @@ export default function Servidor({ onClose, onChanged }) {
   };
 
   if (!cfg) return null;
-  return (
-    <div className="modal" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+  return html`
+    <div className="modal" onMouseDown=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-box">
-        <div className="detail-title">{t('Servidor dedicado')}</div>
+        <div className="detail-title">${t('Servidor dedicado')}</div>
         <div className="hint">
-          {t('O editor lê as cópias de personagem que o guardião guarda no servidor. Editar uma cópia e expulsar o jogador faz o guardião trocar o save dele pela sua versão na próxima entrada.')}
+          ${t('O editor lê as cópias de personagem que o guardião guarda no servidor. Editar uma cópia e expulsar o jogador faz o guardião trocar o save dele pela sua versão na próxima entrada.')}
         </div>
-        {msg && <div className={`hint ${msg.kind}`}>{msg.text}</div>}
+        ${msg && html`<div className=${`hint ${msg.kind}`}>${msg.text}</div>`}
         <div className="srv-form">
-          {campo('Endereço', 'host', 'endereço do servidor')}
-          {campo('Porta (SFTP)', 'porta', '2022', 'number')}
-          {campo('Usuário', 'usuario', 'usuário do SFTP do painel')}
+          ${campo('Endereço', 'host', 'endereço do servidor')}
+          ${campo('Porta (SFTP)', 'porta', '2022', 'number')}
+          ${campo('Usuário', 'usuario', 'usuário do SFTP do painel')}
           <label className="srv-campo">
-            <span className="caps small">{t('Senha')}</span>
-            <input type="password" value={senha} placeholder={cfg.tem_senha ? t('(guardada; deixe vazio para manter)') : t('senha do SFTP')}
-              onChange={(e) => setSenha(e.target.value)} />
+            <span className="caps small">${t('Senha')}</span>
+            <input type="password" value=${senha} placeholder=${cfg.tem_senha ? t('(guardada; deixe vazio para manter)') : t('senha do SFTP')}
+              onChange=${(e) => setSenha(e.target.value)} />
           </label>
-          {campo('Chave do servidor', 'hostkey', 'SHA256:… (vazio = aceita e guarda na primeira conexão)')}
-          {campo('Pasta do guardião', 'pasta', 'guardiao-dados')}
+          ${campo('Chave do servidor', 'hostkey', 'SHA256:… (vazio = aceita e guarda na primeira conexão)')}
+          ${campo('Pasta do guardião', 'pasta', 'guardiao-dados')}
         </div>
         <div className="hint">
-          {t('A chave fixada autentica o servidor. Deixando vazia, a primeira conexão aceita a chave que vier; clique em "Fixar chave vista" depois de testar para gravá-la, e daí em diante uma chave diferente derruba a conexão.')}
-          {modo === 'observar' && ` ${t('O guardião está em modo observar: ele registra as divergências, mas não troca save nenhum.')}`}
+          ${t('A chave fixada autentica o servidor. Deixando vazia, a primeira conexão aceita a chave que vier; clique em "Fixar chave vista" depois de testar para gravá-la, e daí em diante uma chave diferente derruba a conexão.')}
+          ${modo === 'observar' && ` ${t('O guardião está em modo observar: ele registra as divergências, mas não troca save nenhum.')}`}
         </div>
         <div className="row-gap">
-          <GameButton onClick={salvar}>{t('Salvar')}</GameButton>
-          <GameButton onClick={testar} disabled={!cfg.host || !cfg.usuario}>{t('Testar conexão')}</GameButton>
-          <GameButton onClick={fixarChave} disabled={!!cfg.hostkey}>{t('Fixar chave vista')}</GameButton>
-          <GameButton onClick={onClose}>{t('Fechar')}</GameButton>
+          <${GameButton} onClick=${salvar}>${t('Salvar')}<//>
+          <${GameButton} onClick=${testar} disabled=${!cfg.host || !cfg.usuario}>${t('Testar conexão')}<//>
+          <${GameButton} onClick=${fixarChave} disabled=${!!cfg.hostkey}>${t('Fixar chave vista')}<//>
+          <${GameButton} onClick=${onClose}>${t('Fechar')}<//>
         </div>
       </div>
     </div>
-  );
+  `;
 }

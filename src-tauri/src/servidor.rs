@@ -163,21 +163,24 @@ pub async fn servidor_jogadores() -> Result<Vec<Jogador>, String> {
 /// Lê um dos arquivos da cópia de um jogador (A.bin, K.bin, meta.json).
 #[tauri::command]
 pub async fn servidor_ler(steamid: String, arquivo: String) -> Result<tauri::ipc::Response, String> {
+    baixar_da_copia(&steamid, &arquivo).await.map(tauri::ipc::Response::new)
+}
+
+pub async fn baixar_da_copia(steamid: &str, arquivo: &str) -> Result<Vec<u8>, String> {
     let c = carregar();
-    sftp::baixar(&c, &remoto(&c, &[&steamid, &arquivo])?).await.map(tauri::ipc::Response::new)
+    sftp::baixar(&c, &remoto(&c, &[steamid, arquivo])?).await
 }
 
 /// Grava um arquivo da cópia, guardando antes o conteúdo atual em Documentos\Enshrouded-Backups\servidor.
-#[tauri::command]
-pub async fn servidor_gravar(steamid: String, arquivo: String, data: Vec<u8>) -> Result<String, String> {
+pub async fn gravar(steamid: &str, arquivo: &str, data: &[u8]) -> Result<String, String> {
     let c = carregar();
-    if !matches!(arquivo.as_str(), "A.bin" | "K.bin") {
+    if !matches!(arquivo, "A.bin" | "K.bin") {
         return Err("Só A.bin e K.bin podem ser gravados".into());
     }
     if data.is_empty() {
         return Err("Nada para gravar".into());
     }
-    let caminho = remoto(&c, &[&steamid, &arquivo])?;
+    let caminho = remoto(&c, &[steamid, arquivo])?;
     let segs = std::time::SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
     let dir = PathBuf::from(std::env::var("USERPROFILE").unwrap_or_else(|_| ".".into()))
         .join("Documents").join("Enshrouded-Backups").join("servidor")
@@ -185,14 +188,14 @@ pub async fn servidor_gravar(steamid: String, arquivo: String, data: Vec<u8>) ->
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     // backup do que está no servidor antes de sobrescrever
     match sftp::baixar(&c, &caminho).await {
-        Ok(atual) => fs::write(dir.join(&arquivo), atual).map_err(|e| e.to_string())?,
+        Ok(atual) => fs::write(dir.join(arquivo), atual).map_err(|e| e.to_string())?,
         Err(e) => return Err(format!("não consegui baixar a cópia atual para backup: {e}")),
     }
-    sftp::enviar(&c, &caminho, &data).await?;
+    sftp::enviar(&c, &caminho, data).await?;
     if sftp::baixar(&c, &caminho).await? != data {
         return Err("o arquivo no servidor não confere com o enviado".into());
     }
-    atualizar_meta(&c, &steamid, &arquivo, data.len()).await;
+    atualizar_meta(&c, steamid, arquivo, data.len()).await;
     Ok(dir.to_string_lossy().to_string())
 }
 
@@ -248,12 +251,9 @@ pub async fn servidor_recusados(steamid: String) -> Result<Vec<String>, String> 
 
 /// Um save recusado, cru: os bytes do personagem seguidos dos do conhecimento.
 /// Onde um termina e o outro começa é o `tamA` que o registro anotou naquela entrada.
-#[tauri::command]
-pub async fn servidor_recusado_ler(steamid: String, nome: String) -> Result<tauri::ipc::Response, String> {
+pub async fn baixar_recusado(steamid: &str, nome: &str) -> Result<Vec<u8>, String> {
     let c = carregar();
-    sftp::baixar(&c, &remoto_recusado(&c, &steamid, Some(&nome))?)
-        .await
-        .map(tauri::ipc::Response::new)
+    sftp::baixar(&c, &remoto_recusado(&c, steamid, Some(nome))?).await
 }
 
 /// Modo do guardião, lido de guardiao.json na raiz do servidor ("aplicar" ou "observar").

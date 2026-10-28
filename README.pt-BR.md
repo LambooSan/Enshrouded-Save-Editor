@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  🇧🇷 Português · 🇺🇸 <a href="README.md">English</a>
+  🇺🇸 <a href="README.md">English</a> · 🇧🇷 Português · 🇷🇺 <a href="README.ru.md">Русский</a>
 </p>
 
 ---
@@ -53,7 +53,18 @@ isso o que você cria no editor funciona no jogo.
 
 ## 🏰 Com ou sem servidor
 
-**Sem o guardião**, ele abre os `.ksd` que o seu jogo grava localmente.
+**Sem o guardião**, o editor lista os arquivos de personagem (`character0.ksd`, `character1.ksd`, …). Um arquivo de mundo (`world0.ksd`) não é personagem e fica fora dessa lista.
+
+Ele procura em dois lugares:
+
+| | |
+|---|---|
+| **Nuvem da Steam** | `<Steam>\userdata\<SteamID>\1203620\remote\` |
+| **Local, Enshrouded 1.0** | `%USERPROFILE%\Saved Games\keen games\Enshrouded\` |
+
+A pasta da Steam vem do registro (`SteamPath` / `InstallPath`), então uma instalação em `C:\Steam` é achada junto com as de `Program Files`. A pasta `backup` do próprio jogo é pulada. Qualquer outro arquivo abre em **Personagem → Abrir arquivo…**.
+
+Se a lista vier vazia, o personagem está na outra aba do jogo: saves locais e a nuvem da Steam são separados.
 
 **Com o guardião**, as cópias guardadas no servidor aparecem junto dos saves locais:
 
@@ -103,6 +114,9 @@ vez de ser aceita em silêncio.
 
 ## 🌍 Traduzindo
 
+O README principal está em inglês ([`README.md`](README.md)). O mesmo texto está aqui, em português, e em russo
+([`README.ru.md`](README.ru.md)).
+
 A interface vem em português e inglês. Acrescentar um idioma é um arquivo, e a chave da tradução **é o próprio
 texto em português** — então o que faltar traduzir aparece em português, e nada quebra.
 
@@ -120,25 +134,30 @@ export const IDIOMAS = [
 ];
 ```
 
-Nomes de item e de habilidade vêm da localização do próprio jogo (`data/items.json`, em português e inglês).
+Nomes de item e de habilidade vêm da localização do próprio jogo (`src/data/items.json`, em português e inglês).
 
 ## 🛠️ Compilando
 
 Os releases são compilados pelo **GitHub Actions** a partir deste repositório, com
 [log público](../../actions/workflows/build.yml).
 
-Localmente, com Node 20+ e Rust (`x86_64-pc-windows-msvc`):
+Localmente, com Rust (`x86_64-pc-windows-msvc`) — sem Node, sem npm:
 
 ```
-npm ci
-npm run dist        # src-tauri/target/release/enshrouded-save-editor.exe
+cd src-tauri
+cargo build --release   # target/release/enshrouded-save-editor.exe
 ```
 
-Sem pipeline de recursos, sem Python: os recursos da interface já vêm prontos em `build-assets/`. Para desenvolver,
-`npm run dev`. Para testar, `npm test` — inclui uma ida e volta que exige o save remontado **byte a byte idêntico**
-ao original. Sozinho ele roda num bloco sintético que cobre toda combinação de campos extras de um item, o que
-confere o leitor contra o escritor. Provar o formato em si exige saves reais:
-`node tests/ida-e-volta.mjs <pasta com A.bin>`.
+Não há etapa de build da interface: `src/` é JavaScript em módulos ES puros (React via `htm`, com as bibliotecas em
+`src/vendor/`) que o WebView carrega como estão, e o formato do save fica no Rust (`src-tauri/src/formato/`). Sem
+pipeline de recursos, sem Python: os recursos da interface já vêm prontos em `build-assets/`. Para desenvolver,
+`cargo run` dentro de `src-tauri/` (recompila depois de qualquer mudança em `src/`).
+
+Para testar, `cargo test` dentro de `src-tauri/`. Inclui uma ida e volta que exige o bloco de personagem remontado
+**byte a byte idêntico** ao original; sozinho ele roda num bloco sintético que cobre toda combinação de campos extras
+de um item, o que confere o leitor contra o escritor. Provar o formato em si exige saves reais: aponte
+`ENSHROUDED_SAVES` para pastas com `character*.ksd` ou cópias `A.bin` do guardião. Os testes da interface rodam no Edge
+sem janela — o mesmo Chromium do WebView2 — a partir de `tests/navegador/`.
 
 <details>
 <summary><b>Notas do formato do save</b></summary>
@@ -163,7 +182,7 @@ O formato não é documentado em lugar nenhum; tudo aqui saiu de medição.
 
 | pasta | o que é |
 |---|---|
-| `data/*.json` | tabela de itens, árvore de habilidades, mapa de conhecimento, campos extras por tipo de item e as linhas de atributo e melhorias de cada item (~2,5 MB) |
+| `src/data/*.json` | tabela de itens, árvore de habilidades, mapa de conhecimento, campos extras por tipo de item e as linhas de atributo e melhorias de cada item (~2,5 MB) |
 | `build-assets/game/` | ícones, texturas de interface e fontes, reduzidos ao que é usado (~26 MB, embutidos no exe) |
 
 Preparados a partir de uma cópia instalada do jogo. Regerar não faz parte deste repositório: depois de uma

@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  🇺🇸 English · 🇧🇷 <a href="README.pt-BR.md">Português</a>
+  🇺🇸 English · 🇧🇷 <a href="README.pt-BR.md">Português</a> · 🇷🇺 <a href="README.ru.md">Русский</a>
 </p>
 
 ---
@@ -53,7 +53,18 @@ what you create in the editor works in the game.
 
 ## 🏰 With or without a server
 
-**Without the guardian**, it opens the `.ksd` files your game writes locally.
+**Without the guardian**, the editor lists your character files (`character0.ksd`, `character1.ksd`, …). A world file (`world0.ksd`) is not a character and stays out of that list.
+
+It looks in two places:
+
+| | |
+|---|---|
+| **Steam Cloud** | `<Steam>\userdata\<SteamID>\1203620\remote\` |
+| **Local, Enshrouded 1.0** | `%USERPROFILE%\Saved Games\keen games\Enshrouded\` |
+
+The Steam folder comes from the registry (`SteamPath` / `InstallPath`), so an install in `C:\Steam` is found along with the usual `Program Files` locations. The game's own `backup` folder is skipped. Anything else can be opened from **Character → Open file…**.
+
+If the list is empty, the character is on the other tab in the game: local saves and Steam Cloud are separate.
 
 **With the guardian**, the copies stored on the server appear next to your local saves:
 
@@ -104,6 +115,9 @@ silently accepted.
 
 ## 🌍 Translating
 
+This file is the main README. The same text is also in Portuguese ([`README.pt-BR.md`](README.pt-BR.md), the original)
+and Russian ([`README.ru.md`](README.ru.md)).
+
 The interface ships in Portuguese and English. Adding a language is one file, and the translation key **is the
 Portuguese text itself** — so anything left untranslated shows in Portuguese, and nothing breaks.
 
@@ -121,25 +135,30 @@ export const IDIOMAS = [
 ];
 ```
 
-Item and skill names come from the game's own localization (`data/items.json`, in Portuguese and English).
+Item and skill names come from the game's own localization (`src/data/items.json`, in Portuguese and English).
 
 ## 🛠️ Building
 
 Releases are built by **GitHub Actions** from this repository, with a
 [public log](../../actions/workflows/build.yml).
 
-Locally, with Node 20+ and Rust (`x86_64-pc-windows-msvc`):
+Locally, with Rust (`x86_64-pc-windows-msvc`) — no Node, no npm:
 
 ```
-npm ci
-npm run dist        # src-tauri/target/release/enshrouded-save-editor.exe
+cd src-tauri
+cargo build --release   # target/release/enshrouded-save-editor.exe
 ```
 
-No asset pipeline, no Python: the interface assets come ready in `build-assets/`. For development, `npm run dev`. To
-test, `npm test` — it includes a round trip that requires the rebuilt save to be **byte-for-byte identical** to the
-original. On its own it runs against a synthetic block covering every combination of an item's extra fields, which
-checks the reader against the writer. Proving the format itself takes real saves:
-`node tests/ida-e-volta.mjs <folder with A.bin>`.
+There is no frontend build step: the interface in `src/` is plain ES modules (React via `htm`, vendored in
+`src/vendor/`) that the WebView loads as they are, and the save format lives in Rust (`src-tauri/src/formato/`). No
+asset pipeline, no Python: the interface assets come ready in `build-assets/`. For development, `cargo run` from
+`src-tauri/` (it rebuilds after any change in `src/`).
+
+To test, `cargo test` from `src-tauri/`. It includes a round trip that requires the rebuilt character block to be
+**byte-for-byte identical** to the original; on its own it runs against a synthetic block covering every combination
+of an item's extra fields, which checks the reader against the writer. Proving the format itself takes real saves:
+set `ENSHROUDED_SAVES` to folders with `character*.ksd` or guardian `A.bin` copies. The interface tests run in
+headless Edge — the same Chromium as WebView2 — from `tests/navegador/`.
 
 <details>
 <summary><b>Save format notes</b></summary>
@@ -165,7 +184,7 @@ The format isn't documented anywhere; everything here came from measurement.
 
 | folder | what it is |
 |---|---|
-| `data/*.json` | item table, skill tree, knowledge map, extra fields per item type, and each item's attribute lines and enhancements (~2.5 MB) |
+| `src/data/*.json` | item table, skill tree, knowledge map, extra fields per item type, and each item's attribute lines and enhancements (~2.5 MB) |
 | `build-assets/game/` | icons, interface textures and fonts, trimmed to what's used (~26 MB, embedded in the exe) |
 
 Prepared from an installed copy of the game. Regenerating isn't part of this repository: after an update that changes

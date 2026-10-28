@@ -1,6 +1,6 @@
 // Tela "Habilidades": canvas de 8000x8000 com centro em (4000,4000), como no SkillTreeResource.
 // Texturas, larguras nominais, ligações, anel central e rótulos de classe vêm do FbUiBundle.
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { html, useEffect, useMemo, useRef, useState } from './react.js';
 import { skills, nomeDe, descricaoDe, ATRIBUTOS, atributosDaArvore } from './gamedata.js';
 import { ui, tex, ttex, rgba } from './ui.js';
 import { ASSET_BASE } from './platform.js';
@@ -83,99 +83,99 @@ export default function SkillTree({ model, setModel, stage }) {
     return skills.links.map(([a, b]) => [a, b, linkKind(a, b)]).sort((p, q) => order[p[2]] - order[q[2]]);
   }, [levels]);
 
-  return (
-    <div className="screen skilltree" onWheel={onWheel} onMouseDown={onDown} onMouseMove={onMove}
-      style={{ background: rgba(ST.backgroundColor) }}>
-      {/* fundo em camadas com paralaxe, como no jogo */}
-      {ST.bgLayers.map((l, i) => {
+  // fundo em camadas com paralaxe, como no jogo
+  return html`
+    <div className="screen skilltree" onWheel=${onWheel} onMouseDown=${onDown} onMouseMove=${onMove}
+      style=${{ background: rgba(ST.backgroundColor) }}>
+      ${ST.bgLayers.map((l, i) => {
         const z = view.z, p = 1 - l.parallax;
         const s = `translate(${W / 2}px, ${H / 2}px) scale(${z}) translate(${-(CENTER.x + (view.x - CENTER.x) * p)}px, ${-(CENTER.y + (view.y - CENTER.y) * p)}px)`;
-        return (
-          <div key={i} className="st-layer" style={{ transform: s }}>
-            <div style={{ position: 'absolute', left: CENTER.x - l.size.x / 2, top: CENTER.y - l.size.y / 2, width: l.size.x, height: l.size.y, backgroundImage: `url(${ttex(`st_bg_${i}`)})`, backgroundSize: '100% 100%' }} />
+        return html`
+          <div key=${i} className="st-layer" style=${{ transform: s }}>
+            <div style=${{ position: 'absolute', left: CENTER.x - l.size.x / 2, top: CENTER.y - l.size.y / 2, width: l.size.x, height: l.size.y, backgroundImage: `url(${ttex(`st_bg_${i}`)})`, backgroundSize: '100% 100%' }} />
           </div>
-        );
+        `;
       })}
-      <div className="st-canvas" style={canvasStyle}>
-        <img className="st-ring" src={tex(ST.centerRing)} alt=""
-          style={{ left: CENTER.x - ST.centerRingRadius * 1.25, top: CENTER.y - ST.centerRingRadius * 1.25, width: ST.centerRingRadius * 2.5, height: ST.centerRingRadius * 2.5 }} />
+      <div className="st-canvas" style=${canvasStyle}>
+        <img className="st-ring" src=${tex(ST.centerRing)} alt=""
+          style=${{ left: CENTER.x - ST.centerRingRadius * 1.25, top: CENTER.y - ST.centerRingRadius * 1.25, width: ST.centerRingRadius * 2.5, height: ST.centerRingRadius * 2.5 }} />
         <svg className="st-links" width="8000" height="8000">
-          {sortedLinks.map(([a, b, k], i) => {
+          ${sortedLinks.map(([a, b, k], i) => {
             const A = byId.get(a), B = byId.get(b); if (!A || !B) return null;
             const c = ST.links[k];
-            return (
-              <g key={i}>
-                {k !== 'inactive' && <line x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke={rgba(c.glowTint, 0.45)} strokeWidth={c.glow.x * 0.6} strokeLinecap="round" />}
-                <line x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke={rgba(c.coreTint)} strokeWidth={c.core.x * 0.5} strokeLinecap="round" />
+            return html`
+              <g key=${i}>
+                ${k !== 'inactive' && html`<line x1=${A.x} y1=${A.y} x2=${B.x} y2=${B.y} stroke=${rgba(c.glowTint, 0.45)} strokeWidth=${c.glow.x * 0.6} strokeLinecap="round" />`}
+                <line x1=${A.x} y1=${A.y} x2=${B.x} y2=${B.y} stroke=${rgba(c.coreTint)} strokeWidth=${c.core.x * 0.5} strokeLinecap="round" />
               </g>
-            );
+            `;
           })}
         </svg>
-        {nodes.map((n) => {
+        ${nodes.map((n) => {
           const cfg = ST.nodes[TYPE_CFG[n.type]];
           if (!cfg) return null;
           const st = state(n), lv = levels.get(n.id) || 0, w = cfg.width;
           const glowC = ST.glow[CLASS_GLOW[n.class] || 'neutral'];
-          return (
-            <div key={n.id} className={`st-node t-${n.type}`} style={{ left: n.x - w / 2, top: n.y - w / 2, width: w, height: w }}
-              onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover((h) => (h === n ? null : h))}
-              onClick={() => { if (!drag.current?.moved && n.type !== 'Root') setLevel(n.id, lv + 1); }}
-              onContextMenu={(e) => { e.preventDefault(); if (n.type !== 'Root') setLevel(n.id, lv - 1); }}>
-              {st === 'activated' && cfg.glow && n.type !== 'Root' && (
-                <img className="st-glow" alt="" src={ttex(`st_glow_${CLASS_GLOW[n.class] || 'neutral'}`)} style={{ width: w * cfg.glowScale, height: w * cfg.glowScale, left: (w - w * cfg.glowScale) / 2, top: (w - w * cfg.glowScale) / 2 }} />
-              )}
-              <img src={tex(cfg[st] || cfg.inReach)} alt="" draggable={false} />
-              {n.icon && <img className="st-icon" src={tex(st === 'activated' ? n.icon : n.iconOff)} alt="" draggable={false} style={{ width: w * ST.skillIconScale, height: w * ST.skillIconScale, left: (w - w * ST.skillIconScale) / 2, top: (w - w * ST.skillIconScale) / 2 }} />}
-              {n.maxLevel > 0 && <span className="st-level">{lv}/{n.maxLevel}</span>}
+          return html`
+            <div key=${n.id} className=${`st-node t-${n.type}`} style=${{ left: n.x - w / 2, top: n.y - w / 2, width: w, height: w }}
+              onMouseEnter=${() => setHover(n)} onMouseLeave=${() => setHover((h) => (h === n ? null : h))}
+              onClick=${() => { if (!drag.current?.moved && n.type !== 'Root') setLevel(n.id, lv + 1); }}
+              onContextMenu=${(e) => { e.preventDefault(); if (n.type !== 'Root') setLevel(n.id, lv - 1); }}>
+              ${st === 'activated' && cfg.glow && n.type !== 'Root' && html`
+                <img className="st-glow" alt="" src=${ttex(`st_glow_${CLASS_GLOW[n.class] || 'neutral'}`)} style=${{ width: w * cfg.glowScale, height: w * cfg.glowScale, left: (w - w * cfg.glowScale) / 2, top: (w - w * cfg.glowScale) / 2 }} />
+              `}
+              <img src=${tex(cfg[st] || cfg.inReach)} alt="" draggable=${false} />
+              ${n.icon && html`<img className="st-icon" src=${tex(st === 'activated' ? n.icon : n.iconOff)} alt="" draggable=${false} style=${{ width: w * ST.skillIconScale, height: w * ST.skillIconScale, left: (w - w * ST.skillIconScale) / 2, top: (w - w * ST.skillIconScale) / 2 }} />`}
+              ${n.maxLevel > 0 && html`<span className="st-level">${lv}/${n.maxLevel}</span>`}
             </div>
-          );
+          `;
         })}
       </div>
 
-      {ST.classHints.map((h, i) => {
+      ${ST.classHints.map((h, i) => {
         const r = ST.centerRingRadius + h.distance, a = (h.angle * Math.PI) / 180;
         const sx = W / 2 + (CENTER.x + Math.cos(a) * r - view.x) * view.z, sy = H / 2 + (CENTER.y + Math.sin(a) * r - view.y) * view.z;
         const c = { ...h.color, a: 1 };
-        return (
-          <div key={i} className="st-class" style={{ left: sx, top: sy, color: rgba(c), textShadow: `0 0 18px ${rgba(h.color)}`, background: `radial-gradient(ellipse, ${rgba(h.color, 0.55)} 0%, transparent 72%)` }}>
-            {h.label}
+        return html`
+          <div key=${i} className="st-class" style=${{ left: sx, top: sy, color: rgba(c), textShadow: `0 0 18px ${rgba(h.color)}`, background: `radial-gradient(ellipse, ${rgba(h.color, 0.55)} 0%, transparent 72%)` }}>
+            ${h.label}
           </div>
-        );
+        `;
       })}
       <div className="st-points">
-        <img src={`${ASSET_BASE}icons/Token_SkillPoint_icon.webp`} alt="" />
+        <img src=${`${ASSET_BASE}icons/Token_SkillPoint_icon.webp`} alt="" />
         <div>
-          <div className="caps small">{t('Em uso')} <b>{used}</b> · {t('nível {n}', { n: model.level })}</div>
-          <div className="caps small">{t('Disponível')}</div>
-          {total === null ? (
-            <button className="set-total" onClick={() => { setDraft(String(used)); setEditTotal(true); }}>{t('informar total…')}</button>
-          ) : (
-            <div className={`big ${total - used < 0 ? 'neg' : ''}`} onClick={() => { setDraft(String(total)); setEditTotal(true); }} title={t('Clique para mudar o total')}>{total - used}</div>
-          )}
-          {editTotal && (
-            <div className="total-edit" onMouseDown={(e) => e.stopPropagation()}>
-              <span className="hint">{t('Total de pontos (em uso + disponível, como mostra o jogo):')}</span>
-              <input className="g-input" autoFocus type="number" value={draft} onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') saveTotal(); if (e.key === 'Escape') setEditTotal(false); }} />
-              <button className="step" onClick={saveTotal}>OK</button>
+          <div className="caps small">${t('Em uso')} <b>${used}</b> · ${t('nível {n}', { n: model.level })}</div>
+          <div className="caps small">${t('Disponível')}</div>
+          ${total === null ? html`
+            <button className="set-total" onClick=${() => { setDraft(String(used)); setEditTotal(true); }}>${t('informar total…')}</button>
+          ` : html`
+            <div className=${`big ${total - used < 0 ? 'neg' : ''}`} onClick=${() => { setDraft(String(total)); setEditTotal(true); }} title=${t('Clique para mudar o total')}>${total - used}</div>
+          `}
+          ${editTotal && html`
+            <div className="total-edit" onMouseDown=${(e) => e.stopPropagation()}>
+              <span className="hint">${t('Total de pontos (em uso + disponível, como mostra o jogo):')}</span>
+              <input className="g-input" autoFocus type="number" value=${draft} onChange=${(e) => setDraft(e.target.value)}
+                onKeyDown=${(e) => { if (e.key === 'Enter') saveTotal(); if (e.key === 'Escape') setEditTotal(false); }} />
+              <button className="step" onClick=${saveTotal}>OK</button>
             </div>
-          )}
+          `}
         </div>
       </div>
-      {(() => { const { problems } = checkTree(model); return problems.length ? <div className="st-warn">⚠ {problems.join(' · ')}</div> : null; })()}
+      ${(() => { const { problems } = checkTree(model); return problems.length ? html`<div className="st-warn">⚠ ${problems.join(' · ')}</div>` : null; })()}
       <div className="st-attrs">
-        {ATRIBUTOS.map((a) => (
-          <div key={a}><div className="caps small">{t(a)}</div><div className="big">{attrs[a]}</div></div>
-        ))}
+        ${ATRIBUTOS.map((a) => html`
+          <div key=${a}><div className="caps small">${t(a)}</div><div className="big">${attrs[a]}</div></div>
+        `)}
       </div>
-      {hover && (
+      ${hover && html`
         <div className="st-tip">
-          <div className="detail-title">{nomeDe(hover, '')}</div>
-          <div className="detail-sub">{hover.class} · {t('custo {n}', { n: hover.cost })}{hover.maxLevel ? ` · ${t('máx {n}', { n: hover.maxLevel })}` : ''}</div>
-          <div className="tip-desc">{descricaoDe(hover).replace(/%k/g, '?')}</div>
-          <div className="hint">{t('Clique: +1 nível · Botão direito: −1')}</div>
+          <div className="detail-title">${nomeDe(hover, '')}</div>
+          <div className="detail-sub">${hover.class} · ${t('custo {n}', { n: hover.cost })}${hover.maxLevel ? ` · ${t('máx {n}', { n: hover.maxLevel })}` : ''}</div>
+          <div className="tip-desc">${descricaoDe(hover).replace(/%k/g, '?')}</div>
+          <div className="hint">${t('Clique: +1 nível · Botão direito: −1')}</div>
         </div>
-      )}
+      `}
     </div>
-  );
+  `;
 }

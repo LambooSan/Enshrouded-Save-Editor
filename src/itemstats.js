@@ -1,5 +1,5 @@
 // O que o jogo mostra no tooltip de um item, a partir de `data/item-stats.json`.
-import stats from '../data/item-stats.json';
+import stats from './data/item-stats.json' with { type: 'json' };
 import { campoDeNome, localeAtual } from './i18n.js';
 
 const { nomes, itens, balanceamento, tiposDano } = stats;

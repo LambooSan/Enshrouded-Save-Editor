@@ -1,13 +1,13 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
-import Backpack from './Backpack.jsx';
-import SkillTree from './SkillTree.jsx';
-import Character from './Character.jsx';
-import Servidor from './Servidor.jsx';
-import Jogadores from './Jogadores.jsx';
-import Conhecimento from './Conhecimento.jsx';
+import { html, useEffect, useLayoutEffect, useState } from './react.js';
+import Backpack from './Backpack.js';
+import SkillTree from './SkillTree.js';
+import Character from './Character.js';
+import Servidor from './Servidor.js';
+import Jogadores from './Jogadores.js';
+import Conhecimento from './Conhecimento.js';
 import { ui, tex, ttex, rgba } from './ui.js';
 import { api } from './platform.js';
-import { GameButton } from './components.jsx';
+import { GameButton } from './components.js';
 import { checkTree, pointsUsed } from './treecheck.js';
 import { t, dataHora, hora, IDIOMAS, idiomaAtual, definirIdioma, assinarIdioma } from './i18n.js';
 
@@ -48,38 +48,38 @@ function Backups({ model, onClose, onRestored }) {
       setConfirm(null); onRestored();
     } catch (e) { setMsg({ kind: 'error', text: e.message }); setConfirm(null); }
   };
-  return (
-    <div className="modal" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+  return html`
+    <div className="modal" onMouseDown=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-box">
-        <div className="detail-title">{t('Backups de {nome}', { nome: model.name })} <span className="detail-sub">({base})</span></div>
-        <div className="hint">{t('O jogo guarda os 10 últimos salvamentos automaticamente; o editor também copia o save antes de cada gravação.')}</div>
-        {msg && <div className={`hint ${msg.kind}`}>{msg.text}</div>}
+        <div className="detail-title">${t('Backups de {nome}', { nome: model.name })} <span className="detail-sub">(${base})</span></div>
+        <div className="hint">${t('O jogo guarda os 10 últimos salvamentos automaticamente; o editor também copia o save antes de cada gravação.')}</div>
+        ${msg && html`<div className=${`hint ${msg.kind}`}>${msg.text}</div>`}
         <div className="backup-list">
-          {list === null && <div className="hint">{t('Procurando backups…')}</div>}
-          {list?.length === 0 && <div className="hint">{t('Nenhum backup encontrado para este save.')}</div>}
-          {list?.map((b) => (
-            <div key={b.path} className="backup-row">
-              <span className={`bk-kind ${b.kind}`}>{t(KIND_PT[b.kind] || b.kind)}</span>
-              <span className="bk-date">{dataHora(b.modified)}</span>
-              <span className="bk-label" title={b.path}>{b.label}</span>
-              {confirm === b.path ? (
+          ${list === null && html`<div className="hint">${t('Procurando backups…')}</div>`}
+          ${list?.length === 0 && html`<div className="hint">${t('Nenhum backup encontrado para este save.')}</div>`}
+          ${list?.map((b) => html`
+            <div key=${b.path} className="backup-row">
+              <span className=${`bk-kind ${b.kind}`}>${t(KIND_PT[b.kind] || b.kind)}</span>
+              <span className="bk-date">${dataHora(b.modified)}</span>
+              <span className="bk-label" title=${b.path}>${b.label}</span>
+              ${confirm === b.path ? html`
                 <span className="row-gap">
-                  <GameButton small danger onClick={() => restore(b)}>{t('Confirmar')}</GameButton>
-                  <GameButton small onClick={() => setConfirm(null)}>{t('Cancelar')}</GameButton>
+                  <${GameButton} small danger onClick=${() => restore(b)}>${t('Confirmar')}<//>
+                  <${GameButton} small onClick=${() => setConfirm(null)}>${t('Cancelar')}<//>
                 </span>
-              ) : (
-                <GameButton small onClick={() => setConfirm(b.path)} disabled={!!confirm}>{t('Restaurar')}</GameButton>
-              )}
+              ` : html`
+                <${GameButton} small onClick=${() => setConfirm(b.path)} disabled=${!!confirm}>${t('Restaurar')}<//>
+              `}
             </div>
-          ))}
+          `)}
         </div>
         <div className="row-gap">
-          <GameButton onClick={() => api.openBackups()}>{t('Abrir pasta')}</GameButton>
-          <GameButton onClick={onClose}>{t('Fechar')}</GameButton>
+          <${GameButton} onClick=${() => api.openBackups()}>${t('Abrir pasta')}<//>
+          <${GameButton} onClick=${onClose}>${t('Fechar')}<//>
         </div>
       </div>
     </div>
-  );
+  `;
 }
 
 export default function App() {
@@ -170,74 +170,74 @@ export default function App() {
   });
 
   const stageInfo = { w: W, h: H, scale: stage.scale };
-  return (
+  return html`
     <div className="viewport">
-      <div className="stage" style={{ width: W, height: H, transform: `translate(${stage.x}px, ${stage.y}px) scale(${stage.scale})` }}>
+      <div className="stage" style=${{ width: W, height: H, transform: `translate(${stage.x}px, ${stage.y}px) scale(${stage.scale})` }}>
         <div className="world-bg" />
-        {model && !model.readOnly && tab === 'inv' && <Backpack model={model} setModel={setModel} />}
-        {model && !model.readOnly && tab === 'skills' && <SkillTree model={model} setModel={setModel} stage={stageInfo} />}
-        {model && !model.readOnly && tab === 'char' && <Character model={model} setModel={setModel} />}
-        {model && !model.readOnly && tab === 'know' && <Conhecimento model={model} setModel={setModel} />}
-        {tab === 'srv' && (
-          <Jogadores saves={saves} atual={model?.path} onRefresh={refresh}
-            onOpen={(p) => { open(p); setTab('inv'); }} onConfig={() => setShowServidor(true)} />
-        )}
-        {model?.readOnly && tab !== 'srv' && <div className="center-msg">{t('Este save não pôde ser interpretado para edição.')}</div>}
+        ${model && !model.readOnly && tab === 'inv' && html`<${Backpack} model=${model} setModel=${setModel} />`}
+        ${model && !model.readOnly && tab === 'skills' && html`<${SkillTree} model=${model} setModel=${setModel} stage=${stageInfo} />`}
+        ${model && !model.readOnly && tab === 'char' && html`<${Character} model=${model} setModel=${setModel} />`}
+        ${model && !model.readOnly && tab === 'know' && html`<${Conhecimento} model=${model} setModel=${setModel} />`}
+        ${tab === 'srv' && html`
+          <${Jogadores} saves=${saves} atual=${model?.path} onRefresh=${refresh}
+            onOpen=${(p) => { open(p); setTab('inv'); }} onConfig=${() => setShowServidor(true)} />
+        `}
+        ${model?.readOnly && tab !== 'srv' && html`<div className="center-msg">${t('Este save não pôde ser interpretado para edição.')}</div>`}
 
         <div className="topbar">
-          <div className="topbar-bg" style={{ backgroundImage: `url(${tex(ui.menu.topTab)})` }} />
+          <div className="topbar-bg" style=${{ backgroundImage: `url(${tex(ui.menu.topTab)})` }} />
           <div className="topbar-line" />
-          <button className="who" onClick={() => setShowSaves((v) => !v)}>
-            <span className="caps small">{t('Personagem')}</span>
-            <b>{model ? model.name : '—'}</b>
+          <button className="who" onClick=${() => setShowSaves((v) => !v)}>
+            <span className="caps small">${t('Personagem')}</span>
+            <b>${model ? model.name : '—'}</b>
           </button>
           <div className="tabs">
             <span className="key">Q</span>
-            {TABS.map(([k, rotulo, key]) => (
-              <button key={k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}
-                style={{ color: rgba(tab === k ? ui.menu.tabHighlight : ui.menu.tabIdle) }}>
-                <span className="key">{key}</span>
-                {t(rotulo)}
-                {tab === k && <img className="tab-mark" src={ttex('tab_mark')} alt="" />}
+            ${TABS.map(([k, rotulo, key]) => html`
+              <button key=${k} className=${`tab ${tab === k ? 'active' : ''}`} onClick=${() => setTab(k)}
+                style=${{ color: rgba(tab === k ? ui.menu.tabHighlight : ui.menu.tabIdle) }}>
+                <span className="key">${key}</span>
+                ${t(rotulo)}
+                ${tab === k && html`<img className="tab-mark" src=${ttex('tab_mark')} alt="" />`}
               </button>
-            ))}
+            `)}
             <span className="key">E</span>
           </div>
         </div>
 
-        {showSaves && (
+        ${showSaves && html`
           <div className="save-menu">
-            {saves.map((s) => (
-              <button key={s.path} className={`save-item ${model?.path === s.path ? 'on' : ''}`} onClick={() => open(s.path)}>
-                <b>{s.name}{s.servidor && <span className="srv-tag">{t('servidor')}</span>}{s.online && <span className="srv-tag on">{t('na sessão')}</span>}</b>
-                <span>{s.file}{s.level !== undefined ? ` · ${t('nível {n}', { n: s.level })}` : ''}</span>
-                {s.error && <span className="warn">{s.error}</span>}
+            ${saves.map((s) => html`
+              <button key=${s.path} className=${`save-item ${model?.path === s.path ? 'on' : ''}`} onClick=${() => open(s.path)}>
+                <b>${s.name}${s.servidor && html`<span className="srv-tag">${t('servidor')}</span>`}${s.online && html`<span className="srv-tag on">${t('na sessão')}</span>`}</b>
+                <span>${s.file}${s.level !== undefined ? ` · ${t('nível {n}', { n: s.level })}` : ''}</span>
+                ${s.error && html`<span className="warn">${s.error}</span>`}
               </button>
-            ))}
-            <button className="save-item" onClick={async () => { const f = await api.browseSave(); if (f) open(f); }}><b>{t('Abrir arquivo…')}</b></button>
-            <button className="save-item" onClick={() => { setShowSaves(false); setShowServidor(true); }}><b>{t('Configurar servidor…')}</b></button>
+            `)}
+            <button className="save-item" onClick=${async () => { const f = await api.browseSave(); if (f) open(f); }}><b>${t('Abrir arquivo…')}</b></button>
+            <button className="save-item" onClick=${() => { setShowSaves(false); setShowServidor(true); }}><b>${t('Configurar servidor…')}</b></button>
           </div>
-        )}
+        `}
 
         <div className="hints">
-          <select className="lang-select" value={idiomaAtual()} onChange={(e) => definirIdioma(e.target.value)} title={t('Idioma')}>
-            {IDIOMAS.map((i) => <option key={i.codigo} value={i.codigo}>{i.nome}</option>)}
+          <select className="lang-select" value=${idiomaAtual()} onChange=${(e) => definirIdioma(e.target.value)} title=${t('Idioma')}>
+            ${IDIOMAS.map((i) => html`<option key=${i.codigo} value=${i.codigo}>${i.nome}</option>`)}
           </select>
-          {status && <span className={`status ${status.kind}`}>{status.text}</span>}
-          {model?.servidor
-            ? <span className={`game-state ${model.online ? 'on' : ''}`}>
-                {model.online ? t('Jogador na sessão: o servidor sobrescreve a cópia a cada 30 s — expulse-o antes') : t('Cópia do servidor')}
-              </span>
-            : <span className={`game-state ${running ? 'on' : ''}`}>{running ? t('Jogo aberto: feche para salvar') : t('Jogo fechado')}</span>}
-          {dirty && <button className="hint-btn" onClick={() => setModel(clone(orig))}><span className="key">Z</span>{t('Descartar')}</button>}
-          {!model?.servidor && <button className="hint-btn" onClick={() => setShowBackups(true)}><span className="key">B</span>{t('Backups')}</button>}
-          <button className={`hint-btn primary ${dirty && !travado ? '' : 'off'}`} onClick={save}>
-            <span className="key">CTRL+S</span>{model?.servidor ? t('Gravar no servidor') : t('Salvar no save')}
+          ${status && html`<span className=${`status ${status.kind}`}>${status.text}</span>`}
+          ${model?.servidor
+            ? html`<span className=${`game-state ${model.online ? 'on' : ''}`}>
+                ${model.online ? t('Jogador na sessão: o servidor sobrescreve a cópia a cada 30 s — expulse-o antes') : t('Cópia do servidor')}
+              </span>`
+            : html`<span className=${`game-state ${running ? 'on' : ''}`}>${running ? t('Jogo aberto: feche para salvar') : t('Jogo fechado')}</span>`}
+          ${dirty && html`<button className="hint-btn" onClick=${() => setModel(clone(orig))}><span className="key">Z</span>${t('Descartar')}</button>`}
+          ${!model?.servidor && html`<button className="hint-btn" onClick=${() => setShowBackups(true)}><span className="key">B</span>${t('Backups')}</button>`}
+          <button className=${`hint-btn primary ${dirty && !travado ? '' : 'off'}`} onClick=${save}>
+            <span className="key">CTRL+S</span>${model?.servidor ? t('Gravar no servidor') : t('Salvar no save')}
           </button>
         </div>
-        {showBackups && model && !model.servidor && <Backups model={model} onClose={() => setShowBackups(false)} onRestored={() => open(model.path)} />}
-        {showServidor && <Servidor onClose={() => setShowServidor(false)} onChanged={refresh} />}
+        ${showBackups && model && !model.servidor && html`<${Backups} model=${model} onClose=${() => setShowBackups(false)} onRestored=${() => open(model.path)} />`}
+        ${showServidor && html`<${Servidor} onClose=${() => setShowServidor(false)} onChanged=${refresh} />`}
       </div>
     </div>
-  );
+  `;
 }

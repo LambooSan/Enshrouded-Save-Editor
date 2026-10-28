@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { html, Fragment, useEffect, useState } from './react.js';
 import { api } from './platform.js';
-import { GameButton } from './components.jsx';
+import { GameButton } from './components.js';
 import { t, dataHora } from './i18n.js';
 
 // Aba Servidor: os jogadores com cópia guardada pelo guardião, com o que o registro dele mostra.
@@ -53,86 +53,86 @@ export default function Jogadores({ saves, atual, onOpen, onConfig, onRefresh })
   };
   useEffect(carregar, []);
 
-  return (
+  return html`
     <div className="jog">
       <div className="jog-cab">
         <div>
-          <div className="detail-title">{t('Jogadores no servidor')}</div>
+          <div className="detail-title">${t('Jogadores no servidor')}</div>
           <div className="hint">
-            {t('O guardião guarda o último save que o servidor mandou a cada jogador. Edite a cópia aqui e expulse o jogador: ele volta com a sua versão.')}
-            {modo === 'observar' && ` ${t('Atenção: o guardião está em modo observar, então ele ainda não troca save nenhum.')}`}
-            {modo === 'aplicar' && ` ${t('O guardião está em modo aplicar.')}`}
+            ${t('O guardião guarda o último save que o servidor mandou a cada jogador. Edite a cópia aqui e expulse o jogador: ele volta com a sua versão.')}
+            ${modo === 'observar' && ` ${t('Atenção: o guardião está em modo observar, então ele ainda não troca save nenhum.')}`}
+            ${modo === 'aplicar' && ` ${t('O guardião está em modo aplicar.')}`}
           </div>
-          {erro && <div className="hint error">{erro}</div>}
+          ${erro && html`<div className="hint error">${erro}</div>`}
         </div>
         <div className="row-gap">
-          <GameButton small onClick={() => { onRefresh(); carregar(); }}>{t('Atualizar')}</GameButton>
-          <GameButton small onClick={() => api.serverNames(true).then((n) => { setNomes(n); onRefresh(); }).catch((e) => setErro(e.message))}>
-            {t('Reler nomes')}
-          </GameButton>
-          <GameButton small onClick={onConfig}>{t('Configurar servidor')}</GameButton>
+          <${GameButton} small onClick=${() => { onRefresh(); carregar(); }}>${t('Atualizar')}<//>
+          <${GameButton} small onClick=${() => api.serverNames(true).then((n) => { setNomes(n); onRefresh(); }).catch((e) => setErro(e.message))}>
+            ${t('Reler nomes')}
+          <//>
+          <${GameButton} small onClick=${onConfig}>${t('Configurar servidor')}<//>
         </div>
       </div>
 
-      {!jogadores.length && (
-        <div className={`hint ${estado?.erro ? 'error' : ''}`}>
-          {!estado?.configurado
+      ${!jogadores.length && html`
+        <div className=${`hint ${estado?.erro ? 'error' : ''}`}>
+          ${!estado?.configurado
             ? t('Servidor ainda não configurado: clique em "Configurar servidor", preencha endereço, usuário e senha e clique em Salvar.')
             : estado?.erro
               ? t('Não consegui falar com o servidor: {erro}', { erro: estado.erro })
               : t('Nenhum jogador com cópia guardada. Peça para cada um entrar uma vez: o guardião guarda a cópia no primeiro save.')}
         </div>
-      )}
+      `}
       <div className="jog-lista">
-        {jogadores.map((s) => (
-          <button key={s.path} className={`jog-card ${atual === s.path ? 'on' : ''}`} onClick={() => onOpen(s.path)}>
-            <b>{nomeDe(s) ?? s.steamid ?? s.name}</b>
+        ${jogadores.map((s) => html`
+          <button key=${s.path} className=${`jog-card ${atual === s.path ? 'on' : ''}`} onClick=${() => onOpen(s.path)}>
+            <b>${nomeDe(s) ?? s.steamid ?? s.name}</b>
             <span>
-              {nomeDe(s) ? `${s.steamid} · ` : ''}
-              {s.level !== undefined ? t('nível {n}', { n: s.level }) : t('não consegui ler')}
-              {s.modified ? ` · ${t('save de {quando}', { quando: dataHora(s.modified) })}` : ''}
+              ${nomeDe(s) ? `${s.steamid} · ` : ''}
+              ${s.level !== undefined ? t('nível {n}', { n: s.level }) : t('não consegui ler')}
+              ${s.modified ? ` · ${t('save de {quando}', { quando: dataHora(s.modified) })}` : ''}
             </span>
-            {s.online && <span className="srv-tag on">{t('na sessão')}</span>}
-            {s.desatualizado && <span className="warn">{t('sem resposta do servidor: dados da última leitura')}</span>}
-            {s.error && <span className="warn">{s.error}</span>}
+            ${s.online && html`<span className="srv-tag on">${t('na sessão')}</span>`}
+            ${s.desatualizado && html`<span className="warn">${t('sem resposta do servidor: dados da última leitura')}</span>`}
+            ${s.error && html`<span className="warn">${s.error}</span>`}
           </button>
-        ))}
+        `)}
       </div>
 
-      {registro?.length > 0 && (
-        <>
-          <div className="caps small">{t('Últimas entradas')}</div>
+      ${registro?.length > 0 && html`
+        <${Fragment}>
+          <div className="caps small">${t('Últimas entradas')}</div>
           <div className="jog-reg">
-            {registro.map((l, i) => {
+            ${registro.map((l, i) => {
               const m = RECUSA.has(l.decisao) ? recusas[chaveDa(l)] : null;
-              return (
-                <div key={i} className="jog-reg-row">
-                  <span className="bk-date">{dataHora(l.quando)}</span>
-                  <span className="bk-label">{nomes[l.steamid] ?? l.steamid ?? '—'}</span>
-                  <span className={RECUSA.has(l.decisao) ? 'warn' : ''}>{t(DECISAO_PT[l.decisao] ?? l.decisao)}</span>
-                  {RECUSA.has(l.decisao) && l.steamid && (
-                    m === 'lendo' ? <span className="hint">{t('lendo o save recusado…')}</span>
-                      : typeof m === 'string' ? (
+              return html`
+                <div key=${i} className="jog-reg-row">
+                  <span className="bk-date">${dataHora(l.quando)}</span>
+                  <span className="bk-label">${nomes[l.steamid] ?? l.steamid ?? '—'}</span>
+                  <span className=${RECUSA.has(l.decisao) ? 'warn' : ''}>${t(DECISAO_PT[l.decisao] ?? l.decisao)}</span>
+                  ${RECUSA.has(l.decisao) && l.steamid && (
+                    m === 'lendo' ? html`<span className="hint">${t('lendo o save recusado…')}</span>`
+                      : typeof m === 'string' ? html`
                         <span className="hint error">
-                          {m} <GameButton small onClick={() => verMotivo(l)}>{t('Tentar de novo')}</GameButton>
+                          ${m} <${GameButton} small onClick=${() => verMotivo(l)}>${t('Tentar de novo')}<//>
                         </span>
-                      ) : m ? (
+                      ` : m ? html`
                         <div className="jog-motivo">
-                          <b className="caps small">{t('Motivo')}</b>
+                          <b className="caps small">${t('Motivo')}</b>
                           <ul>
-                            {m.motivo.map((linha, j) => (
-                              <li key={j} className={linha.aviso ? 'error' : undefined}>{linha.texto}</li>
-                            ))}
+                            ${m.motivo.map((linha, j) => html`
+                              <li key=${j} className=${linha.aviso ? 'error' : undefined}>${linha.texto}</li>
+                            `)}
                           </ul>
                         </div>
-                      ) : <GameButton small onClick={() => verMotivo(l)}>{t('Ver motivo')}</GameButton>
+                      ` : html`<${GameButton} small onClick=${() => verMotivo(l)}>${t('Ver motivo')}<//>`
                   )}
                 </div>
-              );
+              `;
             })}
           </div>
-        </>
-      )}
+        <//>
+      `}
     </div>
-  );
+  `;
 }

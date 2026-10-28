@@ -153,8 +153,8 @@ async fn recusados_casam_com_o_registro() {
             };
             // pelo comando, como o editor faz, e pelo transporte, para poder medir o tamanho
             assert!(
-                servidor::servidor_recusado_ler(j.steamid.clone(), nome.clone()).await.is_ok(),
-                "servidor_recusado_ler falhou em {}/{nome}",
+                servidor::baixar_recusado(&j.steamid, nome).await.is_ok(),
+                "baixar_recusado falhou em {}/{nome}",
                 j.steamid
             );
             let esperado = reg["tamA"].as_u64().unwrap() + reg["nK"].as_u64().unwrap() * 8;

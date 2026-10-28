@@ -1,10 +1,10 @@
 // Catálogo de itens: categorias com os ícones do menu de produção do jogo, busca, filtros de
 // raridade e tier, grade de ícones e prévia antes de adicionar.
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { html, Fragment, useEffect, useMemo, useRef, useState } from './react.js';
 import { items, CATEGORY_PT, newEntry, itemName } from './gamedata.js';
 import { ttex, itemIcon, rarityColor, RARITY_PT } from './ui.js';
-import { FancyPanel } from './ItemEditor.jsx';
-import { GameButton, Stepper, SlotView, tierOf } from './components.jsx';
+import { FancyPanel } from './ItemEditor.js';
+import { GameButton, Stepper, SlotView, tierOf } from './components.js';
 import { t, localeAtual, idiomaAtual, campoDeNome } from './i18n.js';
 
 const BASE_RARITY = { Common: 1, Uncommon: 2, Rare: 3, Epic: 4, Legendary: 5 };
@@ -55,72 +55,72 @@ export default function Catalog({ target, onAdd, onClose, nivel }) {
   const choose = (it) => { setPick(it); setQty(it.maxStack > 1 ? it.maxStack : 1); };
   const add = () => { if (pick && target !== null) { onAdd(newEntry(pick.id, target, qty, undefined, nivel)); onClose(); } };
 
-  return (
-    <div className="catalog-wrap" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+  // na prévia, a linha depois do subtítulo é o nome no outro idioma, que ajuda a casar com guias e vídeos escritos nele
+  return html`
+    <div className="catalog-wrap" onMouseDown=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="catalog">
         <div className="cat-rail">
-          {CATEGORIES.map(([k, label, icon]) => (
-            <button key={k} className={`cat ${cat === k ? 'on' : ''}`} onClick={() => setCat(k)} title={t(label)}>
-              <img className="cat-icon" src={ttex(`${icon}_${cat === k ? 'gold' : 'light'}`)} alt="" />
-              <span className="cat-label">{t(label)}</span>
-              <span className="cat-count">{counts[k]}</span>
+          ${CATEGORIES.map(([k, label, icon]) => html`
+            <button key=${k} className=${`cat ${cat === k ? 'on' : ''}`} onClick=${() => setCat(k)} title=${t(label)}>
+              <img className="cat-icon" src=${ttex(`${icon}_${cat === k ? 'gold' : 'light'}`)} alt="" />
+              <span className="cat-label">${t(label)}</span>
+              <span className="cat-count">${counts[k]}</span>
             </button>
-          ))}
+          `)}
         </div>
         <div className="cat-main">
           <div className="cat-top">
-            <input ref={search} className="g-input cat-search" placeholder={t('Buscar por nome (português ou inglês)…')} value={q} onChange={(e) => setQ(e.target.value)} />
+            <input ref=${search} className="g-input cat-search" placeholder=${t('Buscar por nome (português ou inglês)…')} value=${q} onChange=${(e) => setQ(e.target.value)} />
             <div className="chips">
-              <button className={`chip ${rar === 0 ? 'on' : ''}`} onClick={() => setRar(0)}>{t('Todas')}</button>
-              {[1, 2, 3, 4, 5].map((r) => (
-                <button key={r} className={`chip ${rar === r ? 'on' : ''}`} onClick={() => setRar(rar === r ? 0 : r)} style={{ color: rarityColor(r) }}>
-                  <img className="chip-gem" src={ttex(`gem_${r}`)} alt="" />{t(RARITY_PT[r])}
+              <button className=${`chip ${rar === 0 ? 'on' : ''}`} onClick=${() => setRar(0)}>${t('Todas')}</button>
+              ${[1, 2, 3, 4, 5].map((r) => html`
+                <button key=${r} className=${`chip ${rar === r ? 'on' : ''}`} onClick=${() => setRar(rar === r ? 0 : r)} style=${{ color: rarityColor(r) }}>
+                  <img className="chip-gem" src=${ttex(`gem_${r}`)} alt="" />${t(RARITY_PT[r])}
                 </button>
-              ))}
+              `)}
             </div>
             <div className="chips">
-              <span className="chip-title">{t('Tier')}</span>
-              <button className={`chip ${tier === 0 ? 'on' : ''}`} onClick={() => setTier(0)}>{t('Todos')}</button>
-              {[1, 2, 3, 4, 5, 6, 7].map((n) => <button key={n} className={`chip ${tier === n ? 'on' : ''}`} onClick={() => setTier(tier === n ? 0 : n)}>{n}</button>)}
-              <span className="chip-count">{list.length > LIMIT ? t('{n} itens (mostrando {limite}; refine a busca)', { n: list.length, limite: LIMIT }) : t('{n} itens', { n: list.length })}</span>
+              <span className="chip-title">${t('Tier')}</span>
+              <button className=${`chip ${tier === 0 ? 'on' : ''}`} onClick=${() => setTier(0)}>${t('Todos')}</button>
+              ${[1, 2, 3, 4, 5, 6, 7].map((n) => html`<button key=${n} className=${`chip ${tier === n ? 'on' : ''}`} onClick=${() => setTier(tier === n ? 0 : n)}>${n}</button>`)}
+              <span className="chip-count">${list.length > LIMIT ? t('{n} itens (mostrando {limite}; refine a busca)', { n: list.length, limite: LIMIT }) : t('{n} itens', { n: list.length })}</span>
             </div>
           </div>
           <div className="cat-grid">
-            {list.slice(0, LIMIT).map((it) => (
-              <div key={it.id} className="cat-tile" onClick={() => choose(it)} onDoubleClick={() => { choose(it); setTimeout(add, 0); }} title={itemName(it.id)}>
-                <SlotView entry={{ itemId: it.id, count: it.maxStack }} selected={pick?.id === it.id} inCatalog />
+            ${list.slice(0, LIMIT).map((it) => html`
+              <div key=${it.id} className="cat-tile" onClick=${() => choose(it)} onDoubleClick=${() => { choose(it); setTimeout(add, 0); }} title=${itemName(it.id)}>
+                <${SlotView} entry=${{ itemId: it.id, count: it.maxStack }} selected=${pick?.id === it.id} inCatalog />
               </div>
-            ))}
+            `)}
           </div>
         </div>
-        <FancyPanel style={{ position: 'relative', left: 0, top: 0, width: 620, height: '100%' }}>
-          {!pick && <div className="detail-empty" style={{ marginTop: 300 }}>{t('Escolha um item.')}</div>}
-          {pick && (
-            <>
-              <div className="ed-icon big" style={{ background: `radial-gradient(circle, ${rarityColor(pick.r).replace(/[\d.]+\)$/, '0.45)')} 0%, transparent 70%)` }}>
-                <img src={itemIcon(pick.id)} alt="" />
+        <${FancyPanel} style=${{ position: 'relative', left: 0, top: 0, width: 620, height: '100%' }}>
+          ${!pick && html`<div className="detail-empty" style=${{ marginTop: 300 }}>${t('Escolha um item.')}</div>`}
+          ${pick && html`
+            <${Fragment}>
+              <div className="ed-icon big" style=${{ background: `radial-gradient(circle, ${rarityColor(pick.r).replace(/[\d.]+\)$/, '0.45)')} 0%, transparent 70%)` }}>
+                <img src=${itemIcon(pick.id)} alt="" />
               </div>
-              <div className="detail-title" style={{ color: rarityColor(pick.r), textAlign: 'center' }}>{itemName(pick.id)}</div>
-              <div className="detail-sub" style={{ textAlign: 'center' }}>
-                {t(CATEGORY_PT[pick.category] || pick.category)}{pick.tier ? ` · ${t('Tier {n}', { n: pick.tier })}` : ''} · {t(RARITY_PT[pick.r])}
+              <div className="detail-title" style=${{ color: rarityColor(pick.r), textAlign: 'center' }}>${itemName(pick.id)}</div>
+              <div className="detail-sub" style=${{ textAlign: 'center' }}>
+                ${t(CATEGORY_PT[pick.category] || pick.category)}${pick.tier ? ` · ${t('Tier {n}', { n: pick.tier })}` : ''} · ${t(RARITY_PT[pick.r])}
               </div>
-              {/* o nome no outro idioma, que ajuda a casar com guias e vídeos escritos nele */}
-              {pick.en && pick.pt && (
-                <div className="hint" style={{ textAlign: 'center' }}>{campoDeNome() === 'pt' ? pick.en : pick.pt}</div>
-              )}
-              {pick.maxStack > 1 && (
-                <div className="ed-row"><div className="ed-label">{t('Quantidade')}</div>
-                  <div className="ed-ctrl"><Stepper value={qty} min={1} max={pick.maxStack} steps={[1, 10]} onChange={setQty} /></div></div>
-              )}
-              <div className="hint">{target === null ? t('Destino: inventário cheio') : t('Destino: espaço {n}', { n: target })}</div>
-              <div style={{ marginTop: 'auto' }}>
-                <GameButton onClick={add} disabled={target === null}>{t('Adicionar')}</GameButton>
+              ${pick.en && pick.pt && html`
+                <div className="hint" style=${{ textAlign: 'center' }}>${campoDeNome() === 'pt' ? pick.en : pick.pt}</div>
+              `}
+              ${pick.maxStack > 1 && html`
+                <div className="ed-row"><div className="ed-label">${t('Quantidade')}</div>
+                  <div className="ed-ctrl"><${Stepper} value=${qty} min=${1} max=${pick.maxStack} steps=${[1, 10]} onChange=${setQty} /></div></div>
+              `}
+              <div className="hint">${target === null ? t('Destino: inventário cheio') : t('Destino: espaço {n}', { n: target })}</div>
+              <div style=${{ marginTop: 'auto' }}>
+                <${GameButton} onClick=${add} disabled=${target === null}>${t('Adicionar')}<//>
               </div>
-            </>
-          )}
-        </FancyPanel>
-        <button className="cat-close" onClick={onClose}><span className="key">ESC</span>{t('Fechar')}</button>
+            <//>
+          `}
+        <//>
+        <button className="cat-close" onClick=${onClose}><span className="key">ESC</span>${t('Fechar')}</button>
       </div>
     </div>
-  );
+  `;
 }

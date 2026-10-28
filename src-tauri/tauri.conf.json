@@ -4,10 +4,10 @@
   "version": "1.0.2",
   "identifier": "local.nicolas.enshrouded-save-editor",
   "build": {
-    "frontendDist": "../dist",
-    "beforeBuildCommand": "npx vite build"
+    "frontendDist": "../src"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "Enshrouded Save Editor",

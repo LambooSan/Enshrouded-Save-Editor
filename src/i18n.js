@@ -2,7 +2,7 @@
 // português em vez de virar "menu.botao.salvar" na tela. O preço é que mudar o texto quebra a
 // chave. Como contribuir com um idioma está no README.
 
-import en from './i18n/en.json';
+import en from './i18n/en.json' with { type: 'json' };
 
 export const IDIOMAS = [
   { codigo: 'pt-BR', nome: 'Português', locale: 'pt-BR', dicionario: null },

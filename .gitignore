@@ -1,5 +1,20 @@
-node_modules/
-dist/
+# build output (cargo and the files tauri-build generates)
 src-tauri/target/
 src-tauri/gen/
+
+# logs
+*.log
+
+# editor and OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+
+# personal saves — character, world, game backups, and guardian copies
 *.ksd
+*.ksd.backup-*
+A.bin
+K.bin
+.diag/

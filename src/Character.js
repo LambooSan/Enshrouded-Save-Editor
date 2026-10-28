@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { html, useState } from './react.js';
 import { skills, items, itemName, ATRIBUTOS, atributosDaArvore } from './gamedata.js';
 import { tex, ttex } from './ui.js';
-import ItemEditor, { FancyPanel } from './ItemEditor.jsx';
-import { SlotView, Stepper, Separator } from './components.jsx';
+import ItemEditor, { FancyPanel } from './ItemEditor.js';
+import { SlotView, Stepper, Separator } from './components.js';
 import { t } from './i18n.js';
 
 // O índice é a posição do bit na máscara, por isso a ordem do vetor não pode mudar — o que muda
@@ -64,59 +64,59 @@ export default function Character({ model, setModel }) {
   const attrs = Object.fromEntries(ATRIBUTOS.map((a) => [a, BASE_ATRIBUTO + daArvore[a]]));
   const dependeDaChama = Object.values(porChama).some((n) => n > 0);
 
-  return (
+  // .doll-center: medalhão central
+  return html`
     <div className="screen character">
-      {/* medalhão central */}
       <div className="doll-center">
-        <img className="doll-orn" src={tex('levelup_ornament')} alt="" />
-        <img className="doll-medal" src={tex('attribute_tabIllustration_basics')} alt="" />
+        <img className="doll-orn" src=${tex('levelup_ornament')} alt="" />
+        <img className="doll-medal" src=${tex('attribute_tabIllustration_basics')} alt="" />
         <div className="doll-badge">
-          <img className="badge-shape" src={ttex('level_badge_gold')} alt="" />
-          <span>{model.level}</span>
+          <img className="badge-shape" src=${ttex('level_badge_gold')} alt="" />
+          <span>${model.level}</span>
         </div>
-        <div className="doll-name">{model.name}</div>
+        <div className="doll-name">${model.name}</div>
       </div>
 
       <div className="doll-stats">
         <div className="stat-row">
-          <span className="caps small">{t('Nível')}</span>
-          <Stepper value={model.level} min={1} max={50} onChange={(v) => setModel({ ...model, level: v })} />
+          <span className="caps small">${t('Nível')}</span>
+          <${Stepper} value=${model.level} min=${1} max=${50} onChange=${(v) => setModel({ ...model, level: v })} />
         </div>
         <div className="stat-row">
-          <span className="caps small">{t('XP no nível')}</span>
-          <Stepper value={model.xp} min={0} max={1e9} steps={[100, 1000]} onChange={(v) => setModel({ ...model, xp: v })} />
+          <span className="caps small">${t('XP no nível')}</span>
+          <${Stepper} value=${model.xp} min=${0} max=${1e9} steps=${[100, 1000]} onChange=${(v) => setModel({ ...model, xp: v })} />
         </div>
-        <Separator />
+        <${Separator} />
         <div className="attr-grid">
-          {ATRIBUTOS.map((a) => <div key={a}><span className="caps small">{t(a)}</span><b>{attrs[a]}</b></div>)}
+          ${ATRIBUTOS.map((a) => html`<div key=${a}><span className="caps small">${t(a)}</span><b>${attrs[a]}</b></div>`)}
         </div>
-        <div className="hint">{t('Atributos calculados pelos nós da árvore (editáveis na aba Habilidades).')}</div>
-        {dependeDaChama && <div className="hint warn">{t('O jogo soma ainda os nós que dependem do nível da Chama e os bônus do equipamento; nenhum dos dois está no save do personagem.')}</div>}
+        <div className="hint">${t('Atributos calculados pelos nós da árvore (editáveis na aba Habilidades).')}</div>
+        ${dependeDaChama && html`<div className="hint warn">${t('O jogo soma ainda os nós que dependem do nível da Chama e os bônus do equipamento; nenhum dos dois está no save do personagem.')}</div>`}
       </div>
 
-      {EQUIP_SLOTS.map((s, i) => (
-        <div key={i} className="doll-slot" style={{ left: s.x, top: s.y, width: SLOT }}>
-          <div style={{ width: SLOT, height: SLOT, position: 'relative' }}>
-            <SlotView entry={bySlot.get(i)} empty={s.tex} selected={sel === i} onClick={() => setSel(i)} />
+      ${EQUIP_SLOTS.map((s, i) => html`
+        <div key=${i} className="doll-slot" style=${{ left: s.x, top: s.y, width: SLOT }}>
+          <div style=${{ width: SLOT, height: SLOT, position: 'relative' }}>
+            <${SlotView} entry=${bySlot.get(i)} empty=${s.tex} selected=${sel === i} onClick=${() => setSel(i)} />
           </div>
-          <span className="doll-label">{t(s.name)}</span>
+          <span className="doll-label">${t(s.name)}</span>
         </div>
-      ))}
+      `)}
       <div className="doll-line left" />
       <div className="doll-line right" />
 
-      <FancyPanel>
-        <div className="caps small">{EQUIP_SLOTS[sel] ? t(EQUIP_SLOTS[sel].name) : t('Espaço {n}', { n: sel })}</div>
-        {aviso && <div className="hint error">{aviso}</div>}
-        {entry ? (
-          <ItemEditor entry={entry} onChange={update} onRemove={() => remove(entry)} />
-        ) : (
+      <${FancyPanel}>
+        <div className="caps small">${EQUIP_SLOTS[sel] ? t(EQUIP_SLOTS[sel].name) : t('Espaço {n}', { n: sel })}</div>
+        ${aviso && html`<div className="hint error">${aviso}</div>`}
+        ${entry ? html`
+          <${ItemEditor} entry=${entry} onChange=${update} onRemove=${() => remove(entry)} />
+        ` : html`
           <div className="empty-slot">
-            <img className="empty-big" src={tex(EQUIP_SLOTS[sel]?.tex ?? 'equipmentslot_head')} alt="" />
-            <div className="detail-sub">{t('Espaço vazio. Vista a peça no jogo; aqui dá para editar ou tirar as peças vestidas.')}</div>
+            <img className="empty-big" src=${tex(EQUIP_SLOTS[sel]?.tex ?? 'equipmentslot_head')} alt="" />
+            <div className="detail-sub">${t('Espaço vazio. Vista a peça no jogo; aqui dá para editar ou tirar as peças vestidas.')}</div>
           </div>
-        )}
-      </FancyPanel>
+        `}
+      <//>
     </div>
-  );
+  `;
 }

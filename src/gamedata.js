@@ -1,6 +1,6 @@
-import items from '../data/items.json';
-import skills from '../data/skills.json';
-import extras from '../data/item-extras.json';
+import items from './data/items.json' with { type: 'json' };
+import skills from './data/skills.json' with { type: 'json' };
+import extras from './data/item-extras.json' with { type: 'json' };
 import { campoDeNome, localeAtual } from './i18n.js';
 
 export { items, skills };
