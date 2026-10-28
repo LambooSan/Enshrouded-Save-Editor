@@ -10,15 +10,15 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/nicolasferreiraxn/Enshrouded-Save-Editor?style=for-the-badge&label=download&color=d4a537" alt="Скачать"></a>
-  <a href="../../actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/nicolasferreiraxn/Enshrouded-Save-Editor/build.yml?style=for-the-badge&label=build" alt="Сборка"></a>
+  <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/LambooSan/Enshrouded-Save-Editor?style=for-the-badge&label=download&color=d4a537" alt="Скачать"></a>
+  <a href="../../actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/LambooSan/Enshrouded-Save-Editor/build.yml?style=for-the-badge&label=build" alt="Сборка"></a>
   <img src="https://img.shields.io/badge/Enshrouded-1.0-8b3fd1?style=for-the-badge" alt="Enshrouded 1.0">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-2b6cb0?style=for-the-badge&logo=windows" alt="Windows">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3c9d5d?style=for-the-badge" alt="MIT"></a>
 </p>
 
 <p align="center">
-  🇺🇸 <a href="README.md">English</a> · 🇧🇷 <a href="README.pt-BR.md">Português</a> · 🇷🇺 Русский
+  🇺🇸 <a href="README.md">English</a> · 🇷🇺 Русский
 </p>
 
 ---
@@ -114,8 +114,7 @@
 
 ## 🌍 Перевод
 
-Главный README — английский ([`README.md`](README.md)). Тот же текст есть на португальском
-([`README.pt-BR.md`](README.pt-BR.md), оригинал) и здесь, на русском.
+Главный README — английский ([`README.md`](README.md)), здесь тот же текст на русском.
 
 Интерфейс программы поставляется на португальском и английском. Новый язык — один файл, и ключ перевода **это сам
 португальский текст**: непереведённое остаётся по-португальски, и ничего не ломается.
@@ -125,7 +124,7 @@
 3. Зарегистрируйте язык в `IDIOMAS` в начале [`src/i18n.js`](src/i18n.js):
 
 ```js
-import es from './i18n/es.json';
+import es from './i18n/es.json' with { type: 'json' };
 
 export const IDIOMAS = [
   { codigo: 'pt-BR', nome: 'Português', locale: 'pt-BR', dicionario: null },
@@ -197,6 +196,9 @@ id или имена, данные устаревают, пока их кто-н
 
 ## ❤️ Благодарности
 
+- **[Nicolas Ferreira](https://github.com/nicolasferreiraxn)** — автор
+  [исходного редактора](https://github.com/nicolasferreiraxn/Enshrouded-Save-Editor), который продолжает этот форк, и
+  исследования формата сейва, на котором он построен.
 - **[kfc-parser / Enshrouded Mod Loader](https://github.com/Brabb3l/kfc-parser)** от brabb3l — им читаются
   ресурсы игры.
 - **Keen Games** — за Enshrouded.
